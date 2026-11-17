@@ -1,4 +1,4 @@
-name: Build LOS 18.1 for OPPO A57 (Rivenmax release-keys)
+name: Build LOS 18.1 for 【entity-OPPO¦canonical_name=OPPO】 A57 (Rivenmax release-keys)
 on:
   workflow_dispatch:
 
@@ -19,6 +19,7 @@ jobs:
         run: |
           mkdir -p lineage && cd lineage
           repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
+          mkdir -p .repo/local_manifests
           cp -r $GITHUB_WORKSPACE/local_manifests/*.xml .repo/local_manifests/
           repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
       - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
