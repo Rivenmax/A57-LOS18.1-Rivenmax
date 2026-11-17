@@ -45,14 +45,16 @@ jobs:
         done
         echo "Backport OK, lanjut build"
 
-    - name: Generate Rivenmax release-keys
+    - name: Pakai key Rivenmax permanen dari Secrets
       run: |
         cd $SYNC_DIR
         mkdir -p vendor/lineage-priv/keys
-        openssl genrsa -out vendor/lineage-priv/keys/releasekey.pem 2048
-        openssl req -new -x509 -key vendor/lineage-priv/keys/releasekey.pem -out vendor/lineage-priv/keys/releasekey.x509.pem -days 10000 -subj "/C=ID/ST=Jawa Tengah/L=Sukoharjo/O=Rivenmax/CN=Rivenmax"
+        echo "${{ secrets.RIVENMAX_RELEASEKEY }}" | base64 -d > vendor/lineage-priv/keys/releasekey.pem
+        echo "${{ secrets.RIVENMAX_RELEASEKEY_X509 }}" | base64 -d > vendor/lineage-priv/keys/releasekey.x509.pem
         ls -lh vendor/lineage-priv/keys/
-
+        echo "PRODUCT_DEFAULT_DEV_CERTIFICATE := vendor/lineage-priv/keys/releasekey" >> device/oppo/A57/BoardConfig.mk
+        echo "PRODUCT_OTA_PUBLIC_KEY := vendor/lineage-priv/keys/releasekey" >> device/oppo/A57/BoardConfig.mk
+        
     - name: Build
       run: |
         cd $SYNC_DIR
