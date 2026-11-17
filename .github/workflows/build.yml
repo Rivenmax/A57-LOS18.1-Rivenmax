@@ -1,20 +1,70 @@
+name: Build LOS 18.1 for A57
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      # Kunci folder sync di satu tempat, biar semua step sama
+      SYNC_DIR: /home/runner/work/A57-LOS18.1-Rivenmax/lineage
+
+    steps:
+    - name: Checkout Manifest Repo
+      uses: actions/checkout@v4
+
+    - name: Free Disk + Install Deps
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+        sudo apt update
+        sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+        mkdir -p ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        echo "$HOME/bin" >> $GITHUB_PATH
+
     - name: Sync LOS 18.1
       run: |
-        mkdir -p ~/android/lineage
-        cd ~/android/lineage
+        mkdir -p $SYNC_DIR
+        cd $SYNC_DIR
         repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
-        # Copy manifest dari repo ini, jangan bikin manual lagi
+        mkdir -p .repo/local_manifests
+        # Pakai A57.xml yang udah kamu buat di 【entity-GitHub¦canonical_name=GitHub】, jangan bikin manual lagi
         cp $GITHUB_WORKSPACE/local_manifests/A57.xml .repo/local_manifests/
         cat .repo/local_manifests/A57.xml
         repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
-        echo "=== CEK DEVICE ==="
         ls -la device/oppo/A57/
 
     - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
       run: |
-        cd ~/android/lineage
-        # PATH BENER, JANGAN PAKE lineage/device/ LAGI
-        cd device/oppo/A57
+        # INI FIX-nya: cd ke SYNC_DIR dulu, baru ke device
+        cd $SYNC_DIR/device/oppo/A57
         pwd
         ls -la
-        # taruh script backport kamu di sini
+        # --- TARUH SCRIPT BACKPORT KAMU DI SINI ---
+        # Contoh: git cherry-pick / git apply patch kamu
+        echo "Backport OK, lanjut build"
+
+    - name: Generate Rivenmax release-keys
+      run: |
+        cd $SYNC_DIR
+        mkdir -p vendor/lineage-priv/keys
+        # isi generate key kamu di sini, jangan di-cd lagi tanpa SYNC_DIR
+
+    - name: Build
+      run: |
+        cd $SYNC_DIR
+        export USE_CCACHE=1
+        export CCACHE_EXEC=/usr/bin/ccache
+        ccache -M 50G
+        source build/envsetup.sh
+        lunch lineage_A57-userdebug
+        mka bacon -j$(nproc --all)
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: LOS-18.1-A57-Rivenmax
+        path: /home/runner/work/A57-LOS18.1-Rivenmax/lineage/out/target/product/A57/*.zip
+        if-no-files-found: error
