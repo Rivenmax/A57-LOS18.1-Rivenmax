@@ -1,5 +1,4 @@
 name: Build LOS 18.1 for A57
-
 on:
   workflow_dispatch:
 
@@ -7,7 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     env:
-      # Kunci folder sync di satu tempat, biar semua step sama
       SYNC_DIR: /home/runner/work/A57-LOS18.1-Rivenmax/lineage
 
     steps:
@@ -30,7 +28,6 @@ jobs:
         cd $SYNC_DIR
         repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
         mkdir -p .repo/local_manifests
-        # Pakai A57.xml yang udah kamu buat di 【entity-GitHub¦canonical_name=GitHub】, jangan bikin manual lagi
         cp $GITHUB_WORKSPACE/local_manifests/A57.xml .repo/local_manifests/
         cat .repo/local_manifests/A57.xml
         repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
@@ -38,19 +35,23 @@ jobs:
 
     - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
       run: |
-        # INI FIX-nya: cd ke SYNC_DIR dulu, baru ke device
         cd $SYNC_DIR/device/oppo/A57
         pwd
         ls -la
-        # --- TARUH SCRIPT BACKPORT KAMU DI SINI ---
-        # Contoh: git cherry-pick / git apply patch kamu
+        git remote add tipz22 https://codeberg.org/TipzTeam/android_device_oppo_A57.git || true
+        git fetch tipz22 lineage-22.1 --depth=20 || true
+        for f in fstab.qcom init.qcom.rc overlay/powerhint.json proprietary-files.txt; do
+          git show tipz22/lineage-22.1:$f > /tmp/fix_$(basename $f) 2>/dev/null && cp /tmp/fix_$(basename $f) $f || echo "SKIP $f"
+        done
         echo "Backport OK, lanjut build"
 
     - name: Generate Rivenmax release-keys
       run: |
         cd $SYNC_DIR
         mkdir -p vendor/lineage-priv/keys
-        # isi generate key kamu di sini, jangan di-cd lagi tanpa SYNC_DIR
+        openssl genrsa -out vendor/lineage-priv/keys/releasekey.pem 2048
+        openssl req -new -x509 -key vendor/lineage-priv/keys/releasekey.pem -out vendor/lineage-priv/keys/releasekey.x509.pem -days 10000 -subj "/C=ID/ST=Jawa Tengah/L=Sukoharjo/O=Rivenmax/CN=Rivenmax"
+        ls -lh vendor/lineage-priv/keys/
 
     - name: Build
       run: |
