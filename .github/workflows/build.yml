@@ -1,4 +1,5 @@
-name: Build LOS 18.1 for 【entity-OPPO¦canonical_name=OPPO】 A57 (Rivenmax release-keys)
+name: Build LOS 18.1 for A57
+
 on:
   workflow_dispatch:
 
@@ -6,46 +7,101 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
-          mkdir -p ~/bin && curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo && chmod +x ~/bin/repo
-          echo "$HOME/bin" >> $GITHUB_PATH
-          git config --global user.name "Rivenmax"
-          git config --global user.email "rivenmax22@gmail.com"
-      - name: Sync LOS 18.1
-        run: |
-          mkdir -p lineage && cd lineage
-          repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
-          mkdir -p .repo/local_manifests
-          cp -r $GITHUB_WORKSPACE/local_manifests/*.xml .repo/local_manifests/
-          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
-      - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
-        run: |
-          cd lineage/device/oppo/A57
-          git remote add tipz22 https://codeberg.org/TipzTeam/android_device_oppo_A57.git || true
-          git fetch tipz22 lineage-22.1 --depth=20 || true
-          for f in fstab.qcom init.qcom.rc overlay/powerhint.json proprietary-files.txt; do
-            git show tipz22/lineage-22.1:$f > /tmp/fix_$(basename $f) 2>/dev/null && cp /tmp/fix_$(basename $f) $f || echo "SKIP $f"
-          done
-      - name: Generate Rivenmax release-keys
-        run: |
-          cd lineage
+
+    # 1. BERSIHIN DISK BIAR MUAT BUILD LOS
+    - name: Free Disk Space
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+        sudo apt clean
+        df -h
+
+    # 2. INSTALL DEPENDENSI
+    - name: Install Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3 repo
+        mkdir -p ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+
+    # 3. SYNC LOS 18.1
+    - name: Sync LOS 18.1
+      run: |
+        mkdir -p ~/android/lineage
+        cd ~/android/lineage
+        export PATH=~/bin:$PATH
+        repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
+        # Manifest device A57 kamu
+        mkdir -p .repo/local_manifests
+        cat > .repo/local_manifests/roomservice.xml <<'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <manifest>
+          <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1" />
+          <project name="Rivenmax/android_kernel_oppo_msm8937" path="kernel/oppo/msm8937" remote="github" revision="lineage-18.1" />
+          <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-18.1" />
+        </manifest>
+        EOF
+        repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+        echo "=== CEK DEVICE ==="
+        ls -R device/oppo/ | head -n 100
+
+    # 4. BACKPORT FIX DARI 22.1 - INI YANG TADI GAGAL
+    - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
+      run: |
+        cd ~/android/lineage
+        # FIX PATH: bukan lineage/device/oppo/A57, tapi device/oppo/A57
+        if [ ! -d "device/oppo/A57" ]; then
+          echo "ERROR: device/oppo/A57 tidak ketemu!"
+          ls device/oppo/ || ls device/
+          exit 1
+        fi
+        cd device/oppo/A57
+        pwd
+        ls -la
+
+        # --- TARUH SCRIPT BACKPORT KAMU DI BAWAH SINI ---
+        # Contoh kalau pakai patch file:
+        # git apply ../../../../patches/camera-fix.patch || true
+        # git apply ../../../../patches/imei-fix.patch || true
+        # git apply ../../../../patches/lockscreen-fix.patch || true
+
+        # Contoh kalau cherry-pick dari branch 22.1:
+        # git fetch https://github.com/Rivenmax/android_device_oppo_A57 lineage-22.1
+        # git cherry-pick <commit-kamera> || git cherry-pick --abort
+        # git cherry-pick <commit-imei> || git cherry-pick --abort
+        # git cherry-pick <commit-lockscreen> || git cherry-pick --abort
+
+        echo "Backport selesai"
+        cd ~/android/lineage
+
+    # 5. GENERATE RELEASE-KEYS
+    - name: Generate Rivenmax release-keys
+      run: |
+        cd ~/android/lineage
+        if [ ! -d "vendor/lineage-priv/keys" ]; then
           mkdir -p vendor/lineage-priv/keys
-          openssl genrsa -out vendor/lineage-priv/keys/releasekey.pem 2048
-          openssl req -new -x509 -key vendor/lineage-priv/keys/releasekey.pem -out vendor/lineage-priv/keys/releasekey.x509.pem -days 10000 -subj "/C=ID/ST=Jawa Tengah/L=Sukoharjo/O=Rivenmax/CN=Rivenmax"
-          ls -lh vendor/lineage-priv/keys/
-      - name: Build
-        run: |
-          cd lineage
-          source build/envsetup.sh
-          export USE_CCACHE=1
-          lunch lineage_A57-userdebug
-          mka bacon -j$(nproc --all)
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: lineage-18.1-Rivenmax-A57
-          path: lineage/out/target/product/A57/*.zip
+          cd vendor/lineage-priv/keys
+          for key in releasekey media shared platform testkey; do
+            ../../../../build/tools/make_key $key '/C=ID/ST=Jawa/O=Rivenmax/CN=Rivenmax/emailAddress=rivenmax@rivenmax.id' || true
+          done
+        fi
+        ls -la vendor/lineage-priv/keys/ || true
+
+    # 6. BUILD
+    - name: Build
+      run: |
+        cd ~/android/lineage
+        export USE_CCACHE=1
+        export CCACHE_EXEC=/usr/bin/ccache
+        ccache -M 50G
+        source build/envsetup.sh
+        lunch lineage_A57-userdebug
+        mka bacon -j$(nproc --all)
+
+    # 7. UPLOAD
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: LOS-18.1-A57-Rivenmax
+        path: ~/android/lineage/out/target/product/A57/*.zip
+        if-no-files-found: error
