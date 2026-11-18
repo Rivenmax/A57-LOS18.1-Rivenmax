@@ -33,6 +33,19 @@ jobs:
         repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
         ls -la device/oppo/A57/
 
+    - name: Patch vendor common 22.1 biar jalan di 18.1
+      run: |
+        cd $SYNC_DIR
+        python3 - << 'PY'
+        import re, pathlib
+        p = pathlib.Path("vendor/oppo/thortanium-common/Android.bp")
+        txt = p.read_text()
+        txt2 = re.sub(r'install_symlink\s*\{.*?\n\}', '// install_symlink removed for 18.1 compatibility', txt, flags=re.DOTALL)
+        p.write_text(txt2)
+        print("Patched Android.bp, install_symlink removed:", txt.count("install_symlink"), "->", txt2.count("install_symlink"))
+        PY
+        cat vendor/oppo/thortanium-common/Android.bp | head -n 30
+
     - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
       run: |
         cd $SYNC_DIR/device/oppo/A57
