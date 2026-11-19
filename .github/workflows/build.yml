@@ -36,20 +36,18 @@ jobs:
           cd $SYNC_DIR
           repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1 || repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1
 
-      - name: Setup Local Manifest - Bikin Langsung, Nggak Pake tmp
+      - name: Setup Local Manifest - Device 18.1 Ijo + Kernel 4.9
         run: |
           mkdir -p $SYNC_DIR/.repo/local_manifests
           cat > $SYNC_DIR/.repo/local_manifests/A57.xml <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <manifest>
-            <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1-k4.9" />
+            <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1" />
             <project name="Rivenmax/android_kernel_oppo_msm8937" path="kernel/oppo/msm8937" remote="github" revision="lineage-18.1-k4.9" />
-            <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-22.1" />
-            <project name="Rivenmax/android_vendor_thortanium-common" path="vendor/thortanium-common" remote="github" revision="lineage-22.1" />
+            <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-18.1" />
           </manifest>
           EOF
           cat $SYNC_DIR/.repo/local_manifests/A57.xml
-          ls -lh $SYNC_DIR/.repo/local_manifests/
 
       - name: Sync
         run: |
@@ -57,28 +55,26 @@ jobs:
           repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j$(nproc --all) || repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j4
           df -h
 
-      - name: Patch vendor common install_symlink
+      - name: Ambil Fix Dari 22.1 Yang Udah Jadi - Cuma 3 Fix Doang
         run: |
           cd $SYNC_DIR
-          find vendor/thortanium-common -name "*.mk" -exec sed -i '/install_symlink/d' {} \; || true
-          find vendor/oppo/A57 -name "*.mk" -exec sed -i '/install_symlink/d' {} \; || true
-          echo "Patched install_symlink"
+          mkdir -p /tmp/fix221
+          cd /tmp/fix221
+          git clone --depth 1 --branch lineage-22.1 https://github.com/TipzTeam/android_device_oppo_A57.git fix221 || git clone --depth 1 --branch lineage-22.1 https://codeberg.org/TipzTeam/android_device_oppo_A57.git fix221
+          cd $SYNC_DIR
+          cp /tmp/fix221/camera/* device/oppo/A57/camera/ 2>/dev/null || echo "camera sudah sama"
+          cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || echo "fstab sudah sama"
+          cp /tmp/fix221/rootdir/etc/init.qcom.rc device/oppo/A57/rootdir/etc/init.qcom.rc || echo "init sudah sama"
+          cp -r /tmp/fix221/overlay/* device/oppo/A57/overlay/ 2>/dev/null || echo "overlay sudah sama"
+          echo "3 Fix dari 22.1 udah ditempel ke 18.1 - Kernel tetep 4.9"
 
       - name: Patch sensorservice biar nggak Werror
         run: |
           cd $SYNC_DIR
           find frameworks/hardware/interfaces/sensorservice -name "Android.bp" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
-          find frameworks/hardware/interfaces/sensorservice -name "*.mk" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
           echo "Patched sensorservice"
 
-      - name: Backport fstab + proprietary dari 22.1
-        run: |
-          cd $SYNC_DIR
-          cp device/oppo/A57/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom.bak || true
-          ls device/oppo/A57/proprietary-files.txt || echo "proprietary-files tidak ada"
-          echo "Backport done"
-
-      - name: Pakai Key Rivenmax
+      - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
           cd $SYNC_DIR
           mkdir -p vendor/lineage-priv/keys
@@ -86,7 +82,7 @@ jobs:
           echo "${{ secrets.RIVENMAX_RELEASEKEY_X509 }}" > vendor/lineage-priv/keys/releasekey.x509.pem
           chmod 600 vendor/lineage-priv/keys/releasekey.pem
           ls -l vendor/lineage-priv/keys/
-          echo "Key Rivenmax terpasang"
+          echo "Key Rivenmax terpasang - nanti jadi real release-keys"
 
       - name: Build
         run: |
@@ -95,6 +91,7 @@ jobs:
           export CCACHE_EXEC=/usr/bin/ccache
           export CCACHE_DIR=/home/runner/.ccache
           export ALLOW_MISSING_DEPENDENCIES=true
+          export PRODUCT_DEFAULT_DEV_CERTIFICATE=vendor/lineage-priv/keys/releasekey
           ccache -M 10G
           ccache -z
           df -h
