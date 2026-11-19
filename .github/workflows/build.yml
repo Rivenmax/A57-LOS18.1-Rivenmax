@@ -44,8 +44,9 @@ jobs:
       - name: Setup Local Manifest
         run: |
           mkdir -p $SYNC_DIR/.repo/local_manifests
-          cp manifest-tmp/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/.github/workflows/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || echo "A57.xml tidak ketemu di repo, cek path!"
+          cp manifest-tmp/local_manifest.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/.github/workflows/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml
           cat $SYNC_DIR/.repo/local_manifests/A57.xml
+          ls -lh $SYNC_DIR/.repo/local_manifests/
 
       - name: Sync
         run: |
