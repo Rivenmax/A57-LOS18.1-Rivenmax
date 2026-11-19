@@ -64,7 +64,6 @@ jobs:
           cd /tmp/fix221
           git clone --depth 1 --branch lineage-22.1 https://github.com/TipzTeam/android_device_oppo_A57.git fix221 || git clone --depth 1 --branch lineage-22.1 https://codeberg.org/TipzTeam/android_device_oppo_A57.git fix221
           cd $SYNC_DIR
-          cp /tmp/fix221/camera/* device/oppo/A57/camera/ 2>/dev/null || echo "camera sudah sama"
           cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || echo "fstab sudah sama"
           cp /tmp/fix221/rootdir/etc/init.qcom.rc device/oppo/A57/rootdir/etc/init.qcom.rc || echo "init sudah sama"
           cp -r /tmp/fix221/overlay/* device/oppo/A57/overlay/ 2>/dev/null || echo "overlay sudah sama"
