@@ -43,7 +43,7 @@ jobs:
           <?xml version="1.0" encoding="UTF-8"?>
           <manifest>
             <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1" />
-            <project name="Rivenmax/android_device_oppo_thortanium-common" path="device/oppo/thortanium-common" remote="github" revision="lineage-18.1" />
+            <project name="Rivenmax/android_device_oppo_thortanium-common" path="device/oppo/thortanium-common" remote="github" revision="lineage-22.1" />
             <project name="Rivenmax/android_kernel_oppo_msm8937" path="kernel/oppo/msm8937" remote="github" revision="lineage-18.1-k4.9" />
             <project name="Rivenmax/proprietary_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-22.1" />
             <project name="Rivenmax/proprietary_vendor_oppo_thortanium-common" path="vendor/oppo/thortanium-common" remote="github" revision="lineage-22.1" />
