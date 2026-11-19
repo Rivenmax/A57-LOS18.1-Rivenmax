@@ -36,15 +36,18 @@ jobs:
           cd $SYNC_DIR
           repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1 || repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1
 
-      - name: Checkout Manifest Repo
-        uses: actions/checkout@v4
-        with:
-          path: manifest-tmp
-
-      - name: Setup Local Manifest
+      - name: Setup Local Manifest - Bikin Langsung, Nggak Pake tmp
         run: |
           mkdir -p $SYNC_DIR/.repo/local_manifests
-          cp manifest-tmp/local_manifest.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/.github/workflows/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml
+          cat > $SYNC_DIR/.repo/local_manifests/A57.xml <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <manifest>
+            <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1-k4.9" />
+            <project name="Rivenmax/android_kernel_oppo_msm8937" path="kernel/oppo/msm8937" remote="github" revision="lineage-18.1-k4.9" />
+            <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-22.1" />
+            <project name="Rivenmax/android_vendor_thortanium-common" path="vendor/thortanium-common" remote="github" revision="lineage-22.1" />
+          </manifest>
+          EOF
           cat $SYNC_DIR/.repo/local_manifests/A57.xml
           ls -lh $SYNC_DIR/.repo/local_manifests/
 
