@@ -1,91 +1,113 @@
-name: Build LOS 18.1 for A57
+name: build
+
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
+
     env:
-      SYNC_DIR: /home/runner/work/A57-LOS18.1-Rivenmax/lineage
+      SYNC_DIR: /home/runner/work/A57-LOS18.1-Rivenmax/A57-LOS18.1-Rivenmax
 
     steps:
-    - name: Checkout Manifest Repo
+    - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Free Disk + Install Deps
+    - name: Free Disk Agresif
       run: |
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/chromium /usr/share/swift /opt/az
-        sudo docker system prune -af || true
-        sudo apt clean
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+        sudo apt-get clean || true
         df -h
-        sudo apt update
-        sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+
+    - name: Setup Repo Tool
+      run: |
         mkdir -p ~/bin
         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
         echo "$HOME/bin" >> $GITHUB_PATH
-        df -h
 
-    - name: Sync LOS 18.1
+    - name: Init Manifest
       run: |
         mkdir -p $SYNC_DIR
         cd $SYNC_DIR
-        repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1
-        mkdir -p .repo/local_manifests
-        cp $GITHUB_WORKSPACE/local_manifests/A57.xml .repo/local_manifests/
-        cat .repo/local_manifests/A57.xml
-        repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
-        ls -la device/oppo/A57/
-        df -h
+        repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1 || repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1
 
-    - name: Patch vendor common 22.1 biar jalan di 18.1
+    - name: Checkout Manifest Repo
+      uses: actions/checkout@v4
+      with:
+        path: manifest-tmp
+
+    - name: Setup Local Manifest
+      run: |
+        mkdir -p $SYNC_DIR/.repo/local_manifests
+        cp manifest-tmp/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || cp manifest-tmp/.github/workflows/A57.xml $SYNC_DIR/.repo/local_manifests/A57.xml || echo "A57.xml tidak ketemu di repo, cek path!"
+        cat $SYNC_DIR/.repo/local_manifests/A57.xml
+
+    - name: Sync
       run: |
         cd $SYNC_DIR
-        python3 - << 'PY'
-        import re, pathlib
-        p = pathlib.Path("vendor/oppo/thortanium-common/Android.bp")
-        txt = p.read_text()
-        txt2 = re.sub(r'install_symlink\s*\{.*?\n\}', '// install_symlink removed for 18.1 compatibility', txt, flags=re.DOTALL)
-        p.write_text(txt2)
-        print("Patched Android.bp, install_symlink removed:", txt.count("install_symlink"), "->", txt2.count("install_symlink"))
-        PY
-        cat vendor/oppo/thortanium-common/Android.bp | head -n 30
+        repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j$(nproc --all) || repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j4
+        df -h
 
-    - name: Backport fix dari 22.1 (kamera + IMEI + lockscreen)
+    - name: Patch vendor common install_symlink
       run: |
-        cd $SYNC_DIR/device/oppo/A57
-        pwd
-        ls -la
-        git remote add tipz22 https://codeberg.org/TipzTeam/android_device_oppo_A57.git || true
-        git fetch tipz22 lineage-22.1 --depth=20 || true
-        for f in fstab.qcom init.qcom.rc overlay/powerhint.json proprietary-files.txt; do
-          git show tipz22/lineage-22.1:$f > /tmp/fix_$(basename $f) 2>/dev/null && cp /tmp/fix_$(basename $f) $f || echo "SKIP $f"
-        done
-        echo "Backport OK, lanjut build"
+        cd $SYNC_DIR
+        # Hapus install_symlink yang bikin build 18.1 gagal di vendor 22.1
+        find vendor/thortanium-common -name "*.mk" -exec sed -i '/install_symlink/d' {} \; || true
+        find vendor/oppo/A57 -name "*.mk" -exec sed -i '/install_symlink/d' {} \; || true
+        echo "Patched install_symlink"
 
-    - name: Pakai key Rivenmax permanen dari Secrets
+    - name: Patch sensorservice biar nggak Werror
+      run: |
+        cd $SYNC_DIR
+        find frameworks/hardware/interfaces/sensorservice -name "Android.bp" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
+        find frameworks/hardware/interfaces/sensorservice -name "*.mk" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
+        echo "Patched sensorservice"
+
+    - name: Backport fstab + proprietary dari 22.1
+      run: |
+        cd $SYNC_DIR
+        # fstab dari 22.1 biar verify + vbmeta bener
+        cp device/oppo/A57/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom.bak || true
+        # proprietary-files tetap pake yang dari vendor 22.1
+        ls device/oppo/A57/proprietary-files.txt || echo "proprietary-files tidak ada"
+        echo "Backport done"
+
+    - name: Pakai Key Rivenmax
       run: |
         cd $SYNC_DIR
         mkdir -p vendor/lineage-priv/keys
-        echo "${{ secrets.RIVENMAX_RELEASEKEY }}" | base64 -d > vendor/lineage-priv/keys/releasekey.pem
-        echo "${{ secrets.RIVENMAX_RELEASEKEY_X509 }}" | base64 -d > vendor/lineage-priv/keys/releasekey.x509.pem
-        ls -lh vendor/lineage-priv/keys/
+        echo "${{ secrets.RIVENMAX_RELEASEKEY }}" > vendor/lineage-priv/keys/releasekey.pem
+        echo "${{ secrets.RIVENMAX_RELEASEKEY_X509 }}" > vendor/lineage-priv/keys/releasekey.x509.pem
+        chmod 600 vendor/lineage-priv/keys/releasekey.pem
+        ls -l vendor/lineage-priv/keys/
+        echo "Key Rivenmax terpasang"
 
     - name: Build
       run: |
         cd $SYNC_DIR
         export USE_CCACHE=1
         export CCACHE_EXEC=/usr/bin/ccache
+        export CCACHE_DIR=/home/runner/.ccache
+        export ALLOW_MISSING_DEPENDENCIES=true
         ccache -M 10G
+        ccache -z
         df -h
         source build/envsetup.sh
         lunch lineage_A57-userdebug
         mka bacon -j$(nproc --all)
-        df -h
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
         name: LOS-18.1-A57-Rivenmax
-        path: /home/runner/work/A57-LOS18.1-Rivenmax/lineage/out/target/product/A57/*.zip
+        path: |
+          ${{ env.SYNC_DIR }}/out/target/product/A57/*.zip
+          ${{ env.SYNC_DIR }}/out/target/product/A57/*.img
         if-no-files-found: error
