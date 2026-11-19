@@ -36,7 +36,7 @@ jobs:
           cd $SYNC_DIR
           repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --git-lfs --depth=1 || repo init -u https://github.com/LineageOS/android.git -b lineage-18.1 --depth=1
 
-      - name: Setup Local Manifest - Device 18.1 Ijo + Kernel 4.9
+      - name: Setup Local Manifest - Device 18.1 Ijo + Kernel 4.9 + Vendor 22.1
         run: |
           mkdir -p $SYNC_DIR/.repo/local_manifests
           cat > $SYNC_DIR/.repo/local_manifests/A57.xml <<'EOF'
@@ -44,7 +44,7 @@ jobs:
           <manifest>
             <project name="Rivenmax/android_device_oppo_A57" path="device/oppo/A57" remote="github" revision="lineage-18.1" />
             <project name="Rivenmax/android_kernel_oppo_msm8937" path="kernel/oppo/msm8937" remote="github" revision="lineage-18.1-k4.9" />
-            <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-18.1" />
+            <project name="Rivenmax/android_vendor_oppo_A57" path="vendor/oppo/A57" remote="github" revision="lineage-22.1" />
           </manifest>
           EOF
           cat $SYNC_DIR/.repo/local_manifests/A57.xml
