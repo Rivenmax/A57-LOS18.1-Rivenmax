@@ -57,7 +57,7 @@ jobs:
           repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j$(nproc --all) || repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune -j4
           df -h
 
-      - name: Ambil Fix Dari 22.1 Yang Udah Jadi - Cuma 3 Fix Doang
+      - name: Ambil Fix Dari 22.1 Yang Udah Jadi - Tanpa Camera Biar Nggak Duplikat
         run: |
           cd $SYNC_DIR
           mkdir -p /tmp/fix221
@@ -67,7 +67,7 @@ jobs:
           cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || echo "fstab sudah sama"
           cp /tmp/fix221/rootdir/etc/init.qcom.rc device/oppo/A57/rootdir/etc/init.qcom.rc || echo "init sudah sama"
           cp -r /tmp/fix221/overlay/* device/oppo/A57/overlay/ 2>/dev/null || echo "overlay sudah sama"
-          echo "3 Fix dari 22.1 udah ditempel ke 18.1 - Kernel tetep 4.9"
+          echo "Fix dari 22.1 udah ditempel - Tanpa camera, biar nggak duplikat - Kernel tetep 4.9"
 
       - name: Patch sensorservice biar nggak Werror
         run: |
@@ -78,19 +78,23 @@ jobs:
       - name: Patch thortanium-common 22.1 jadi 18.1
         run: |
           cd $SYNC_DIR
-          # Hapus install_symlink + relative_install_path yang cuma ada di 22.1
           find device/oppo/thortanium-common vendor/oppo/thortanium-common -name "Android.bp" -exec sed -i '/relative_install_path/d' {} \; || true
-          # Hapus blok install_symlink di Android.bp pake python
           python3 -c "
           import pathlib, re
           for p in list(pathlib.Path('device/oppo/thortanium-common').rglob('Android.bp')) + list(pathlib.Path('vendor/oppo/thortanium-common').rglob('Android.bp')):
               t = p.read_text(errors='ignore')
-              # Hapus modul install_symlink sampe kurung tutup
               t = re.sub(r'install_symlink\s*\{[^}]*\},?', '', t, flags=re.DOTALL)
               p.write_text(t)
               print('patched', p)
           "
           echo "Patched thortanium-common Soong"
+
+      - name: Hapus Duplikat Kamera - Biar Tinggal 1
+        run: |
+          cd $SYNC_DIR
+          rm -rf device/oppo/A57/camera
+          echo "Hapus camera A57, pake camera thortanium-common aja"
+          ls device/oppo/thortanium-common/camera/ | head
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
