@@ -89,13 +89,17 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Patch Kernel 4.9 Biar GCC 4.9 Boleh Jalan
+      - name: Patch Kernel 4.9 - GCC Check + Matiin Werror Biar ext4 Lolos
         run: |
           cd $SYNC_DIR
           sed -i 's/50100/40900/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
           sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
           grep -n "GCC_VERSION\|too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h | head -20
-          echo "Patched kernel GCC check 5.1 -> 4.9"
+          find kernel/oppo/msm8937 -name "Makefile" -exec sed -i 's/-Werror/-Wno-error/g; s/-Werror=implicit-function-declaration//g; s/-Werror=date-time//g' {} \; || true
+          find kernel/oppo/msm8937/fs/ext4 -name "Makefile" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
+          sed -i 's/KBUILD_CFLAGS.*/KBUILD_CFLAGS += -Wno-error -Wno-implicit-fallthrough -Wno-unused-function -Wno-unused-variable -Wno-maybe-uninitialized/' kernel/oppo/msm8937/Makefile || true
+          echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/A57/BoardConfig.mk
+          echo "Patched kernel GCC check 5.1 -> 4.9 + Werror dimatiin semua"
 
       - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
