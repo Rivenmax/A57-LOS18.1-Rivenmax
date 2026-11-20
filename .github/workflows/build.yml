@@ -89,6 +89,14 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
+      - name: Patch Kernel 4.9 Biar GCC 4.9 Boleh Jalan
+        run: |
+          cd $SYNC_DIR
+          sed -i 's/50100/40900/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
+          sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
+          grep -n "GCC_VERSION\|too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h | head -20
+          echo "Patched kernel GCC check 5.1 -> 4.9"
+
       - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
           cd $SYNC_DIR
