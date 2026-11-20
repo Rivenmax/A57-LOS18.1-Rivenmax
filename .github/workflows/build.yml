@@ -89,7 +89,7 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Fix Duplikat Total - Hapus Android.mk Doang, Balikin Semua File Config
+      - name: Fix Duplikat Total - Recovery Pake 18.1, Bukan 22.1
         run: |
           cd $SYNC_DIR
           python3 -c "
@@ -103,7 +103,12 @@ jobs:
           open(p,'w').write('\n'.join(out) + '\n')
           print(open(p).read())
           "
-          rm -rf device/oppo/A57/camera device/oppo/A57/recovery device/oppo/A57/power device/oppo/A57/libshims
+          rm -rf device/oppo/thortanium-common/recovery device/oppo/thortanium-common/camera device/oppo/thortanium-common/power device/oppo/thortanium-common/libshims
+          sed -i '/recovery/d' device/oppo/thortanium-common/Android.mk || true
+          sed -i '/camera/d' device/oppo/thortanium-common/Android.mk || true
+          sed -i '/power/d' device/oppo/thortanium-common/Android.mk || true
+          cd device/oppo/A57 && git checkout -- recovery camera power libshims 2>/dev/null || git restore recovery camera power libshims 2>/dev/null || echo "restore A57 recovery dari git"
+          cd $SYNC_DIR
           rm -f device/oppo/A57/audio/Android.mk device/oppo/A57/rootdir/Android.mk
           mkdir -p device/oppo/A57/rootdir/etc device/oppo/A57/audio
           cp device/oppo/thortanium-common/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || true
@@ -113,9 +118,8 @@ jobs:
           cp device/oppo/thortanium-common/audio/audio_effects.xml device/oppo/A57/audio/audio_effects.xml || find device/oppo/thortanium-common -name "audio_effects.xml" -exec cp {} device/oppo/A57/audio/audio_effects.xml \; || true
           cp device/oppo/thortanium-common/audio/*.conf device/oppo/A57/audio/ 2>/dev/null || true
           cp device/oppo/thortanium-common/audio/*.xml device/oppo/A57/audio/ 2>/dev/null || true
-          cp device/oppo/thortanium-common/audio/*.txt device/oppo/A57/audio/ 2>/dev/null || true
-          ls -lh device/oppo/A57/rootdir/etc/ device/oppo/A57/audio/
-          echo "Duplikat ilang, fstab + audio + semua config dibalikin, Android.mk doang yang dihapus"
+          ls -lh device/oppo/A57/recovery/ device/oppo/A57/rootdir/etc/ device/oppo/A57/audio/
+          echo "Recovery sekarang pake 18.1 punya A57, bukan 22.1 lagi"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
