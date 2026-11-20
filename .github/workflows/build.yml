@@ -89,7 +89,7 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Fix Duplikat Total - Recovery Pake 18.1, Bukan 22.1
+      - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
           cd $SYNC_DIR
           python3 -c "
@@ -101,13 +101,16 @@ jobs:
                   continue
               out.append(l)
           open(p,'w').write('\n'.join(out) + '\n')
-          print(open(p).read())
           "
           rm -rf device/oppo/thortanium-common/recovery device/oppo/thortanium-common/camera device/oppo/thortanium-common/power device/oppo/thortanium-common/libshims
+          rm -rf device/oppo/A57/recovery
           sed -i '/recovery/d' device/oppo/thortanium-common/Android.mk || true
           sed -i '/camera/d' device/oppo/thortanium-common/Android.mk || true
           sed -i '/power/d' device/oppo/thortanium-common/Android.mk || true
-          cd device/oppo/A57 && git checkout -- recovery camera power libshims 2>/dev/null || git restore recovery camera power libshims 2>/dev/null || echo "restore A57 recovery dari git"
+          sed -i '/TARGET_RECOVERY_UPDATER_LIBS/d' device/oppo/A57/BoardConfig.mk device/oppo/A57/BoardConfigCommon.mk device/oppo/thortanium-common/BoardConfig.mk device/oppo/thortanium-common/BoardConfigCommon.mk 2>/dev/null || true
+          sed -i '/librecovery_updater_oppo/d' device/oppo/A57/BoardConfig.mk device/oppo/A57/BoardConfigCommon.mk device/oppo/thortanium-common/BoardConfig.mk device/oppo/thortanium-common/BoardConfigCommon.mk device/oppo/A57/device.mk device/oppo/thortanium-common/*.mk 2>/dev/null || true
+          grep -r "recovery_updater" device/oppo/A57/ device/oppo/thortanium-common/ 2>/dev/null || echo "recovery_updater udah bersih"
+          cd device/oppo/A57 && git checkout -- camera power libshims 2>/dev/null || git restore camera power libshims 2>/dev/null || echo "restore A57 camera/power"
           cd $SYNC_DIR
           rm -f device/oppo/A57/audio/Android.mk device/oppo/A57/rootdir/Android.mk
           mkdir -p device/oppo/A57/rootdir/etc device/oppo/A57/audio
@@ -118,8 +121,8 @@ jobs:
           cp device/oppo/thortanium-common/audio/audio_effects.xml device/oppo/A57/audio/audio_effects.xml || find device/oppo/thortanium-common -name "audio_effects.xml" -exec cp {} device/oppo/A57/audio/audio_effects.xml \; || true
           cp device/oppo/thortanium-common/audio/*.conf device/oppo/A57/audio/ 2>/dev/null || true
           cp device/oppo/thortanium-common/audio/*.xml device/oppo/A57/audio/ 2>/dev/null || true
-          ls -lh device/oppo/A57/recovery/ device/oppo/A57/rootdir/etc/ device/oppo/A57/audio/
-          echo "Recovery sekarang pake 18.1 punya A57, bukan 22.1 lagi"
+          ls -lh device/oppo/A57/rootdir/etc/ device/oppo/A57/audio/
+          echo "Recovery updater 22.1 dimatiin, recovery pake bawaan 18.1"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
