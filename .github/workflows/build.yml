@@ -89,12 +89,17 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Hapus Duplikat Kamera - Biar Tinggal 1
+      - name: Hapus Duplikat Dari Android.mk - Bukan Foldernya
         run: |
           cd $SYNC_DIR
-          rm -rf device/oppo/A57/camera
-          echo "Hapus camera A57, pake camera thortanium-common aja"
-          ls device/oppo/thortanium-common/camera/ | head
+          sed -i '/recovery/d' device/oppo/A57/Android.mk || true
+          sed -i '/camera/d' device/oppo/A57/Android.mk || true
+          sed -i '/libshims/d' device/oppo/A57/Android.mk || true
+          sed -i '/audio/d' device/oppo/A57/Android.mk || true
+          sed -i '/power/d' device/oppo/A57/Android.mk || true
+          rm -rf device/oppo/A57/camera device/oppo/A57/recovery
+          echo "Patched Android.mk duplikat"
+          grep -n "recovery\|camera" device/oppo/A57/Android.mk || echo "udah bersih, nggak ada recovery/camera lagi di A57"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
