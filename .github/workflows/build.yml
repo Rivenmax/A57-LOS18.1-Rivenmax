@@ -97,18 +97,21 @@ jobs:
           lines = open(p).read().splitlines()
           out = []
           for l in lines:
-              if 'include' in l and 'thortanium-common' not in l and 'LOCAL_PATH' not in l:
+              # Hapus SEMUA include kecuali yang common doang, tanpa pengecualian LOCAL_PATH
+              if 'include' in l and 'thortanium-common' not in l:
                   continue
               out.append(l)
           open(p,'w').write('\n'.join(out) + '\n')
           print(open(p).read())
           "
           rm -rf device/oppo/A57/camera device/oppo/A57/recovery device/oppo/A57/audio device/oppo/A57/power device/oppo/A57/libshims
+          # Hapus Android.mk nya rootdir biar nggak ke-include 2x, tapi fstab nya tetep ada
+          rm -f device/oppo/A57/rootdir/Android.mk
           mkdir -p device/oppo/A57/rootdir/etc
           cp device/oppo/thortanium-common/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || echo "fstab nggak ketemu"
           cp device/oppo/thortanium-common/rootdir/etc/init.qcom.rc device/oppo/A57/rootdir/etc/init.qcom.rc || true
           ls -lh device/oppo/A57/rootdir/etc/
-          echo "A57 sekarang cuma include common, rootdir + fstab udah dibalikin"
+          echo "A57 sekarang cuma include common, rootdir Android.mk dihapus, fstab tetep ada"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
