@@ -89,17 +89,22 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Hapus Duplikat Dari Android.mk - Bukan Foldernya
+      - name: Fix Duplikat Total - A57 Cuma Include Common Doang
         run: |
           cd $SYNC_DIR
-          sed -i '/recovery/d' device/oppo/A57/Android.mk || true
-          sed -i '/camera/d' device/oppo/A57/Android.mk || true
-          sed -i '/libshims/d' device/oppo/A57/Android.mk || true
-          sed -i '/audio/d' device/oppo/A57/Android.mk || true
-          sed -i '/power/d' device/oppo/A57/Android.mk || true
-          rm -rf device/oppo/A57/camera device/oppo/A57/recovery
-          echo "Patched Android.mk duplikat"
-          grep -n "recovery\|camera" device/oppo/A57/Android.mk || echo "udah bersih, nggak ada recovery/camera lagi di A57"
+          python3 -c "
+          p = 'device/oppo/A57/Android.mk'
+          lines = open(p).read().splitlines()
+          out = []
+          for l in lines:
+              if 'include' in l and 'thortanium-common' not in l and 'LOCAL_PATH' not in l:
+                  continue
+              out.append(l)
+          open(p,'w').write('\n'.join(out) + '\n')
+          print(open(p).read())
+          "
+          rm -rf device/oppo/A57/camera device/oppo/A57/recovery device/oppo/A57/rootdir device/oppo/A57/audio device/oppo/A57/power device/oppo/A57/libshims
+          echo "A57 sekarang cuma include common, nggak ada lagi duplikat"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
