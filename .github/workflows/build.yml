@@ -89,7 +89,7 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Fix Duplikat Total - A57 Cuma Include Common Doang + Balikin fstab
+      - name: Fix Duplikat Total - Hapus Android.mk Doang, Balikin Semua File Config
         run: |
           cd $SYNC_DIR
           python3 -c "
@@ -97,21 +97,25 @@ jobs:
           lines = open(p).read().splitlines()
           out = []
           for l in lines:
-              # Hapus SEMUA include kecuali yang common doang, tanpa pengecualian LOCAL_PATH
               if 'include' in l and 'thortanium-common' not in l:
                   continue
               out.append(l)
           open(p,'w').write('\n'.join(out) + '\n')
           print(open(p).read())
           "
-          rm -rf device/oppo/A57/camera device/oppo/A57/recovery device/oppo/A57/audio device/oppo/A57/power device/oppo/A57/libshims
-          # Hapus Android.mk nya rootdir biar nggak ke-include 2x, tapi fstab nya tetep ada
-          rm -f device/oppo/A57/rootdir/Android.mk
-          mkdir -p device/oppo/A57/rootdir/etc
-          cp device/oppo/thortanium-common/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || echo "fstab nggak ketemu"
+          rm -rf device/oppo/A57/camera device/oppo/A57/recovery device/oppo/A57/power device/oppo/A57/libshims
+          rm -f device/oppo/A57/audio/Android.mk device/oppo/A57/rootdir/Android.mk
+          mkdir -p device/oppo/A57/rootdir/etc device/oppo/A57/audio
+          cp device/oppo/thortanium-common/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || cp /tmp/fix221/rootdir/etc/fstab.qcom device/oppo/A57/rootdir/etc/fstab.qcom || true
           cp device/oppo/thortanium-common/rootdir/etc/init.qcom.rc device/oppo/A57/rootdir/etc/init.qcom.rc || true
-          ls -lh device/oppo/A57/rootdir/etc/
-          echo "A57 sekarang cuma include common, rootdir Android.mk dihapus, fstab tetep ada"
+          cp device/oppo/thortanium-common/rootdir/etc/*.sh device/oppo/A57/rootdir/etc/ 2>/dev/null || true
+          cp device/oppo/thortanium-common/rootdir/etc/*.rc device/oppo/A57/rootdir/etc/ 2>/dev/null || true
+          cp device/oppo/thortanium-common/audio/audio_effects.xml device/oppo/A57/audio/audio_effects.xml || find device/oppo/thortanium-common -name "audio_effects.xml" -exec cp {} device/oppo/A57/audio/audio_effects.xml \; || true
+          cp device/oppo/thortanium-common/audio/*.conf device/oppo/A57/audio/ 2>/dev/null || true
+          cp device/oppo/thortanium-common/audio/*.xml device/oppo/A57/audio/ 2>/dev/null || true
+          cp device/oppo/thortanium-common/audio/*.txt device/oppo/A57/audio/ 2>/dev/null || true
+          ls -lh device/oppo/A57/rootdir/etc/ device/oppo/A57/audio/
+          echo "Duplikat ilang, fstab + audio + semua config dibalikin, Android.mk doang yang dihapus"
 
       - name: Pakai Key Rivenmax - Real Release-Keys
         run: |
