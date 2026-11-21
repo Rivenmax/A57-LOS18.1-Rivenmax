@@ -89,7 +89,7 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Patch Kernel 4.9 - Balikin Dulu, Baru Patch Aman
+      - name: Patch Kernel 4.9 - GCC + StackProtector + Werror
         run: |
           cd $SYNC_DIR
           cd kernel/oppo/msm8937 && git reset --hard && git clean -fd && cd $SYNC_DIR
@@ -97,10 +97,12 @@ jobs:
           sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h
           find kernel/oppo/msm8937 -name "Makefile" -exec sed -i 's/-Werror//g' {} \; || true
           find kernel/oppo/msm8937 -name "Kbuild" -exec sed -i 's/-Werror//g' {} \; || true
+          find kernel/oppo/msm8937/arch -name "*defconfig" -exec sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/; s/CONFIG_CC_STACKPROTECTOR_ALL=y/# CONFIG_CC_STACKPROTECTOR_ALL is not set/' {} \; || true
+          find kernel/oppo/msm8937/arch -name "*defconfig" -exec sh -c 'grep -q "CONFIG_CC_STACKPROTECTOR_REGULAR" "$1" || echo "CONFIG_CC_STACKPROTECTOR_REGULAR=y" >> "$1"; grep -q "CONFIG_CC_STACKPROTECTOR_NONE" "$1" || echo "# CONFIG_CC_STACKPROTECTOR_STRONG is not set" >> "$1"' _ {} \; || true
+          grep -r "STACKPROTECTOR" kernel/oppo/msm8937/arch/arm64/configs/ | head -20
           grep -n "too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h
           echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/A57/BoardConfig.mk
-          echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/thortanium-common/BoardConfigCommon.mk 2>/dev/null || true
-          echo "Kernel dipatch aman - Makefile nggak ditimpa lagi"
+          echo "Kernel dipatch - StackProtector Strong dimatiin, ganti ke Regular biar GCC 4.9 bisa"
 
       - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
