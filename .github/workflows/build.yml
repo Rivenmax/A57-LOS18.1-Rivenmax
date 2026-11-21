@@ -89,17 +89,18 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Patch Kernel 4.9 - GCC Check + Matiin Werror Biar ext4 Lolos
+      - name: Patch Kernel 4.9 - Balikin Dulu, Baru Patch Aman
         run: |
           cd $SYNC_DIR
-          sed -i 's/50100/40900/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
-          sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h || true
-          grep -n "GCC_VERSION\|too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h | head -20
-          find kernel/oppo/msm8937 -name "Makefile" -exec sed -i 's/-Werror/-Wno-error/g; s/-Werror=implicit-function-declaration//g; s/-Werror=date-time//g' {} \; || true
-          find kernel/oppo/msm8937/fs/ext4 -name "Makefile" -exec sed -i 's/-Werror/-Wno-error/g' {} \; || true
-          sed -i 's/KBUILD_CFLAGS.*/KBUILD_CFLAGS += -Wno-error -Wno-implicit-fallthrough -Wno-unused-function -Wno-unused-variable -Wno-maybe-uninitialized/' kernel/oppo/msm8937/Makefile || true
+          cd kernel/oppo/msm8937 && git reset --hard && git clean -fd && cd $SYNC_DIR
+          sed -i 's/50100/40900/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h
+          sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h
+          find kernel/oppo/msm8937 -name "Makefile" -exec sed -i 's/-Werror//g' {} \; || true
+          find kernel/oppo/msm8937 -name "Kbuild" -exec sed -i 's/-Werror//g' {} \; || true
+          grep -n "too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h
           echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/A57/BoardConfig.mk
-          echo "Patched kernel GCC check 5.1 -> 4.9 + Werror dimatiin semua"
+          echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/thortanium-common/BoardConfigCommon.mk 2>/dev/null || true
+          echo "Kernel dipatch aman - Makefile nggak ditimpa lagi"
 
       - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
@@ -121,7 +122,6 @@ jobs:
           sed -i '/power/d' device/oppo/thortanium-common/Android.mk || true
           sed -i '/TARGET_RECOVERY_UPDATER_LIBS/d' device/oppo/A57/BoardConfig.mk device/oppo/A57/BoardConfigCommon.mk device/oppo/thortanium-common/BoardConfig.mk device/oppo/thortanium-common/BoardConfigCommon.mk 2>/dev/null || true
           sed -i '/librecovery_updater_oppo/d' device/oppo/A57/BoardConfig.mk device/oppo/A57/BoardConfigCommon.mk device/oppo/thortanium-common/BoardConfig.mk device/oppo/thortanium-common/BoardConfigCommon.mk device/oppo/A57/device.mk device/oppo/thortanium-common/*.mk 2>/dev/null || true
-          grep -r "recovery_updater" device/oppo/A57/ device/oppo/thortanium-common/ 2>/dev/null || echo "recovery_updater udah bersih"
           cd device/oppo/A57 && git checkout -- camera power libshims 2>/dev/null || git restore camera power libshims 2>/dev/null || echo "restore A57 camera/power"
           cd $SYNC_DIR
           rm -f device/oppo/A57/audio/Android.mk device/oppo/A57/rootdir/Android.mk
