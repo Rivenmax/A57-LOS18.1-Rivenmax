@@ -89,7 +89,7 @@ jobs:
           "
           echo "Patched thortanium-common Soong"
 
-      - name: Patch Kernel 4.9 - GCC + StackProtector + Werror
+      - name: Patch Kernel 4.9 - GCC + StackProtector NONE + Werror
         run: |
           cd $SYNC_DIR
           cd kernel/oppo/msm8937 && git reset --hard && git clean -fd && cd $SYNC_DIR
@@ -97,12 +97,26 @@ jobs:
           sed -i 's/5\.1 or newer/4.9 or newer/g' kernel/oppo/msm8937/include/linux/compiler-gcc.h
           find kernel/oppo/msm8937 -name "Makefile" -exec sed -i 's/-Werror//g' {} \; || true
           find kernel/oppo/msm8937 -name "Kbuild" -exec sed -i 's/-Werror//g' {} \; || true
-          find kernel/oppo/msm8937/arch -name "*defconfig" -exec sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/; s/CONFIG_CC_STACKPROTECTOR_ALL=y/# CONFIG_CC_STACKPROTECTOR_ALL is not set/' {} \; || true
-          find kernel/oppo/msm8937/arch -name "*defconfig" -exec sh -c 'grep -q "CONFIG_CC_STACKPROTECTOR_REGULAR" "$1" || echo "CONFIG_CC_STACKPROTECTOR_REGULAR=y" >> "$1"; grep -q "CONFIG_CC_STACKPROTECTOR_NONE" "$1" || echo "# CONFIG_CC_STACKPROTECTOR_STRONG is not set" >> "$1"' _ {} \; || true
+          python3 -c "
+          import pathlib
+          for p in pathlib.Path('kernel/oppo/msm8937/arch').rglob('*defconfig'):
+              lines = p.read_text(errors='ignore').splitlines()
+              out = []
+              for l in lines:
+                  if 'CONFIG_CC_STACKPROTECTOR' in l:
+                      continue
+                  out.append(l)
+              out.append('CONFIG_CC_STACKPROTECTOR_NONE=y')
+              out.append('# CONFIG_CC_STACKPROTECTOR_REGULAR is not set')
+              out.append('# CONFIG_CC_STACKPROTECTOR_STRONG is not set')
+              out.append('# CONFIG_CC_STACKPROTECTOR_ALL is not set')
+              p.write_text('\n'.join(out) + '\n')
+              print('patched', p)
+          "
           grep -r "STACKPROTECTOR" kernel/oppo/msm8937/arch/arm64/configs/ | head -20
           grep -n "too old" kernel/oppo/msm8937/include/linux/compiler-gcc.h
           echo "TARGET_KERNEL_ADDITIONAL_FLAGS := KCFLAGS=-Wno-error" >> device/oppo/A57/BoardConfig.mk
-          echo "Kernel dipatch - StackProtector Strong dimatiin, ganti ke Regular biar GCC 4.9 bisa"
+          echo "Kernel dipatch - StackProtector dimatiin total ke NONE biar GCC 4.9 bisa"
 
       - name: Fix Duplikat Total - Matikan Recovery Updater 22.1 Sekalian
         run: |
